@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}About VoteSecure - Secure Online Voting{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header" style="text-align: center; padding: 3rem 0;">
+        <h1>About VoteSecure</h1>
+        <p class="lead">Revolutionizing democratic processes through technology</p>
+    </div>
+
+    <div class="about-content">
+        <div class="about-section">
+            <h2>Our Mission</h2>
+            <p>VoteSecure is committed to making democratic processes more accessible, transparent, and secure through cutting-edge technology. We believe that every eligible voter should have the opportunity to participate in elections conveniently and confidently.</p>
+        </div>
+
+        <div class="about-section">
+            <h2>Why Online Voting?</h2>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <i class="fas fa-accessibility fa-2x"></i>
+                    <h4>Accessibility</h4>
+                    <p>Enable voting for people with disabilities, elderly citizens, and those in remote areas.</p>
+                </div>
+                <div class="benefit-card">
+                    <i class="fas fa-bolt fa-2x"></i>
+                    <h4>Efficiency</h4>
+                    <p>Reduce costs and time associated with traditional voting methods.</p>
+                </div>
+                <div class="benefit-card">
+                    <i class="fas fa-chart-line fa-2x"></i>
+                    <h4>Transparency</h4>
+                    <p>Provide real-time results and comprehensive election analytics.</p>
+                </div>
+                <div class="benefit-card">
+                    <i class="fas fa-user-shield fa-2x"></i>
+                    <h4>Security</h4>
+                    <p>Implement multiple layers of security to protect election integrity.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <h2>Technology Stack</h2>
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <h4>Frontend</h4>
+                    <p>HTML5, CSS3, JavaScript</p>
+                    <p>Responsive design for all devices</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Backend</h4>
+                    <p>Python Flask Framework</p>
+                    <p>RESTful API architecture</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Database</h4>
+                    <p>SQLite3 with secure data encryption</p>
+                    <p>ACID compliance for data integrity</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Security</h4>
+                    <p>OTP-based authentication</p>
+                    <p>AI-powered fraud detection</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <h2>Future Enhancements</h2>
+            <div class="future-features">
+                <div class="feature-item">
+                    <i class="fas fa-fingerprint fa-2x"></i>
+                    <div>
+                        <h4>Biometric Authentication</h4>
+                        <p>Implement fingerprint and facial recognition for enhanced security.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-link fa-2x"></i>
+                    <div>
+                        <h4>Blockchain Integration</h4>
+                        <p>Use blockchain technology for immutable vote recording.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-robot fa-2x"></i>
+                    <div>
+                        <h4>AI Chatbot</h4>
+                        <p>Intelligent assistant for voter queries and support.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-mobile-alt fa-2x"></i>
+                    <div>
+                        <h4>Mobile App</h4>
+                        <p>Dedicated mobile application for iOS and Android.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.about-section {
+    margin-bottom: 4rem;
+}
+
+.about-section h2 {
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.benefit-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.benefit-card:hover {
+    transform: translateY(-5px);
+}
+
+.benefit-card i {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.benefit-card h4 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.tech-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.tech-item {
+    background: var(--light);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.tech-item h4 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.future-features {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.feature-item i {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .feature-item {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

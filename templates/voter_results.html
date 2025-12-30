@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Election Results - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Election Results</h1>
+        <p>View voting results for completed elections in your constituency.</p>
+    </div>
+
+    <!-- Election Selection -->
+    <div class="election-selection">
+        <form method="GET" action="{{ url_for('voter_routes.view_results') }}">
+            <div class="form-group">
+                <label for="election_id">Select Election:</label>
+                <select id="election_id" name="election_id" onchange="this.form.submit()">
+                    <option value="">-- Select an Election --</option>
+                    {% for e in elections %}
+                    <option value="{{ e.id }}" {% if election and e.id == election.id %}selected{% endif %}>
+                        {{ e.title }} ({{ e.constituency }}) - {{ e.end_time[:10] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    {% if election %}
+    <!-- Election Details -->
+    <div class="election-details">
+        <h2>{{ election.title }}</h2>
+        <div class="election-meta">
+            <p><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</p>
+            <p><i class="far fa-calendar-check"></i> 
+                {% if election.end_time %}
+                    Election ended: {{ election.end_time[:16] }}
+                {% else %}
+                    Election in progress
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="results-section">
+        <h3>Vote Count</h3>
+        {% if results %}
+            <div class="results-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Candidate</th>
+                            <th>Party</th>
+                            <th>Votes</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_votes = results|sum(attribute='vote_count') %}
+                        {% for result in results %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ result.name }}</td>
+                            <td>{{ result.party }}</td>
+                            <td>{{ result.vote_count }}</td>
+                            <td>
+                                {% if total_votes > 0 %}
+                                    {{ "%.1f"|format((result.vote_count / total_votes) * 100) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="3"><strong>Total Votes</strong></td>
+                            <td colspan="2"><strong>{{ total_votes }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Winner Announcement -->
+            {% if results and total_votes > 0 %}
+            <div class="winner-section">
+                <div class="winner-card">
+                    <h4>🏆 Election Winner</h4>
+                    <div class="winner-details">
+                        <h3>{{ results[0].name }}</h3>
+                        <p class="winner-party">{{ results[0].party }}</p>
+                        <p class="winner-votes">{{ results[0].vote_count }} votes ({{ "%.1f"|format((results[0].vote_count / total_votes) * 100) }}%)</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-chart-bar fa-3x" style="color: var(--gray); margin-bottom: 1rem;"></i>
+                <h4>No Votes Cast</h4>
+                <p>No votes were cast in this election.</p>
+            </div>
+        {% endif %}
+    </div>
+    {% else %}
+        <div class="no-election-selected">
+            <i class="fas fa-hand-pointer fa-3x" style="color: var(--gray); margin-bottom: 1rem;"></i>
+            <h3>Select an Election</h3>
+            <p>Please select an election from the dropdown above to view results.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.election-selection {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.election-details {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.election-meta p {
+    margin: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.results-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.results-table {
+    overflow-x: auto;
+    margin-bottom: 2rem;
+}
+
+.results-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results-table th,
+.results-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.results-table th {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+.results-table tr:hover {
+    background: #f8f9fa;
+}
+
+.total-row {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+.winner-section {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.winner-card {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 2px solid #ffd43b;
+    border-radius: 15px;
+    padding: 2rem;
+    display: inline-block;
+}
+
+.winner-details h3 {
+    color: #e67700;
+    margin-bottom: 0.5rem;
+}
+
+.winner-party {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.winner-votes {
+    color: var(--success);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.no-results,
+.no-election-selected {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 2rem 0;
+}
+
+/* Rank styling */
+.results-table tbody tr:nth-child(1) {
+    background: #fff3cd !important;
+    font-weight: bold;
+}
+
+.results-table tbody tr:nth-child(1) td {
+    border-bottom: 2px solid #ffd43b;
+}
+
+@media (max-width: 768px) {
+    .election-meta p {
+        justify-content: flex-start;
+    }
+    
+    .results-table {
+        font-size: 0.9rem;
+    }
+    
+    .results-table th,
+    .results-table td {
+        padding: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

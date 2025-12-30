@@ -1,0 +1,355 @@
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
+from database import get_db, hash_password, get_constituencies  # ADD get_constituencies here
+import os
+from auth import voter_login_required, generate_otp, send_otp_email, log_audit
+from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from database import get_constituencies
+import sqlite3
+
+voter_bp = Blueprint('voter_routes', __name__)
+
+def update_election_status():
+    """Update election status based on current time - same as in admin_routes"""
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with get_db() as db:
+        # Update to active
+        db.execute('''
+            UPDATE elections 
+            SET status = 'active' 
+            WHERE start_time <= ? AND end_time >= ? AND status = 'upcoming'
+        ''', (current_time, current_time))
+        
+        # Update to completed
+        db.execute('''
+            UPDATE elections 
+            SET status = 'completed' 
+            WHERE end_time < ? AND status != 'completed'
+        ''', (current_time,))
+        db.commit()
+
+@voter_bp.route('/voter/login', methods=['GET', 'POST'])
+def voter_login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = hash_password(request.form['password'])
+        
+        with get_db() as db:
+            voter = db.execute(
+                'SELECT * FROM voters WHERE email = ? AND password = ?',
+                (email, password)
+            ).fetchone()
+            
+            if voter:
+                # Check if voter is verified
+                if not voter['is_verified']:
+                    flash('Please verify your email before logging in', 'error')
+                    return redirect(url_for('voter_routes.verify_email'))
+                
+                session['voter_id'] = voter['id']
+                session['voter_name'] = voter['name']
+                session['voter_email'] = voter['email']
+                session['voter_constituency'] = voter['constituency']
+                flash('Login successful!', 'success')
+                return redirect(url_for('voter_routes.voter_dashboard'))
+            else:
+                flash('Invalid credentials', 'error')
+    
+    return render_template('voter_login.html')
+
+@voter_bp.route('/voter/register', methods=['GET', 'POST'])
+def voter_register():
+    # GET CONSTITUENCIES FROM DATABASE
+    constituencies = get_constituencies()
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = hash_password(request.form['password'])
+        constituency = request.form['constituency']
+        # Aadhar number removed
+        
+        with get_db() as db:
+            # Check if email already exists
+            existing_voter = db.execute(
+                'SELECT * FROM voters WHERE email = ?', (email,)
+            ).fetchone()
+            
+            if existing_voter:
+                flash('Email already registered', 'error')
+                return render_template('voter_register.html', constituencies=constituencies)  # PASS CONSTITUENCIES ON ERROR
+            
+            # Generate OTP
+            otp = generate_otp()
+            otp_expiry = datetime.now().timestamp() + 600  # 10 minutes
+            
+            # Store voter data in session for verification
+            session['pending_voter'] = {
+                'name': name,
+                'email': email,
+                'password': password,
+                'constituency': constituency,
+                'otp': otp,
+                'otp_expiry': otp_expiry
+            }
+            
+            # Send OTP email
+            if send_otp_email(email, otp):
+                flash('OTP sent to your email. Please verify to complete registration.', 'success')
+                return redirect(url_for('voter_routes.verify_email'))
+            else:
+                flash('Failed to send OTP. Please try again.', 'error')
+    
+    # PASS CONSTITUENCIES TO TEMPLATE FOR BOTH GET AND POST
+    return render_template('voter_register.html', constituencies=constituencies)
+
+@voter_bp.route('/voter/verify-email', methods=['GET', 'POST'])
+def verify_email():
+    # Check if pending voter data exists
+    pending = session.get('pending_voter')
+    if not pending:
+        flash('Session expired. Please register again.', 'error')
+        return redirect(url_for('voter_routes.voter_register'))
+
+    # Handle POST - user submitted OTP
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp', '')
+        saved_otp = pending['otp']
+        expiry_time = pending['otp_expiry']
+
+        # Check expiry
+        if datetime.now().timestamp() > expiry_time:
+            session.pop('pending_voter', None)
+            flash('OTP expired. Please register again.', 'error')
+            return redirect(url_for('voter_routes.voter_register'))
+
+        # Check OTP match
+        if entered_otp != saved_otp:
+            flash('Invalid verification code', 'error')
+            return redirect(url_for('voter_routes.verify_email'))
+
+        # OTP is correct → save voter to DB
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO voters (name, email, password, constituency, is_verified)
+                VALUES (?, ?, ?, ?, 1)
+            ''', (pending['name'], pending['email'], pending['password'], pending['constituency']))
+            db.commit()
+
+        # Clear session pending data
+        session.pop('pending_voter', None)
+        flash('Email verified successfully! You can now log in.', 'success')
+
+        return redirect(url_for('voter_routes.voter_login'))
+
+    return render_template('verify_email.html')
+
+
+@voter_bp.route('/voter/dashboard')
+@voter_login_required
+def voter_dashboard():
+    update_election_status()  # Update election status first
+    
+    with get_db() as db:
+        # Get active elections for voter's constituency
+        active_elections = db.execute('''
+            SELECT * FROM elections 
+            WHERE status = 'active' AND constituency = ?
+            ORDER BY created_at DESC
+        ''', (session['voter_constituency'],)).fetchall()
+        
+        # Get upcoming elections
+        upcoming_elections = db.execute('''
+            SELECT * FROM elections 
+            WHERE status = 'upcoming' AND constituency = ?
+            ORDER BY start_time ASC
+        ''', (session['voter_constituency'],)).fetchall()
+        
+        # Get elections the voter has already voted in
+        voted_elections = db.execute('''
+            SELECT e.* FROM elections e
+            JOIN votes v ON e.id = v.election_id
+            WHERE v.voter_id = ?
+        ''', (session['voter_id'],)).fetchall()
+        
+        # Get completed elections in voter's constituency
+        completed_elections = db.execute('''
+            SELECT * FROM elections 
+            WHERE status = 'completed' AND constituency = ?
+            ORDER BY end_time DESC
+        ''', (session['voter_constituency'],)).fetchall()
+    
+    return render_template('voter_dashboard.html',
+                         active_elections=active_elections,
+                         upcoming_elections=upcoming_elections,
+                         voted_elections=voted_elections,
+                         completed_elections=completed_elections)
+
+@voter_bp.route('/voter/vote/<int:election_id>')
+@voter_login_required
+def vote(election_id):
+    with get_db() as db:
+        # Check if election exists and is active
+        election = db.execute(
+            'SELECT * FROM elections WHERE id = ? AND status = "active"',
+            (election_id,)
+        ).fetchone()
+        
+        if not election:
+            flash('Election not found or not active', 'error')
+            return redirect(url_for('voter_routes.voter_dashboard'))
+        
+        # Check if voter has already voted in this election
+        existing_vote = db.execute(
+            'SELECT * FROM votes WHERE voter_id = ? AND election_id = ?',
+            (session['voter_id'], election_id)
+        ).fetchone()
+        
+        if existing_vote:
+            flash('You have already voted in this election', 'error')
+            return redirect(url_for('voter_routes.voter_dashboard'))
+        
+        # Check if voter's constituency matches election constituency
+        if session['voter_constituency'] != election['constituency']:
+            flash('This election is not for your constituency', 'error')
+            return redirect(url_for('voter_routes.voter_dashboard'))
+        
+        # Get candidates for this election (same constituency)
+        candidates = db.execute('''
+            SELECT * FROM candidates 
+            WHERE constituency = ?
+            ORDER BY name
+        ''', (election['constituency'],)).fetchall()
+    
+    return render_template('vote.html', 
+                         election=election, 
+                         candidates=candidates)
+
+@voter_bp.route('/voter/submit-vote/<int:election_id>', methods=['POST'])
+@voter_login_required
+def submit_vote(election_id):
+    candidate_id = request.form.get('candidate_id')
+    
+    if not candidate_id:
+        flash('Please select a candidate', 'error')
+        return redirect(url_for('voter_routes.vote', election_id=election_id))
+    
+    with get_db() as db:
+        # Double-check voting constraints
+        election = db.execute(
+            'SELECT * FROM elections WHERE id = ? AND status = "active"',
+            (election_id,)
+        ).fetchone()
+        
+        if not election:
+            flash('Election not found or not active', 'error')
+            return redirect(url_for('voter_routes.voter_dashboard'))
+        
+        existing_vote = db.execute(
+            'SELECT * FROM votes WHERE voter_id = ? AND election_id = ?',
+            (session['voter_id'], election_id)
+        ).fetchone()
+        
+        if existing_vote:
+            flash('You have already voted in this election', 'error')
+            return redirect(url_for('voter_routes.voter_dashboard'))
+        
+        # Verify candidate exists and is in correct constituency
+        candidate = db.execute(
+            'SELECT * FROM candidates WHERE id = ? AND constituency = ?',
+            (candidate_id, election['constituency'])
+        ).fetchone()
+        
+        if not candidate:
+            flash('Invalid candidate selection', 'error')
+            return redirect(url_for('voter_routes.vote', election_id=election_id))
+        
+        # Record the vote
+        try:
+            # Try with voted_at first
+            db.execute('''
+                INSERT INTO votes (voter_id, election_id, candidate_id, voted_at)
+                VALUES (?, ?, ?, ?)
+            ''', (session['voter_id'], election_id, candidate_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        except sqlite3.OperationalError:
+            # If voted_at column doesn't exist, insert without it
+            db.execute('''
+                INSERT INTO votes (voter_id, election_id, candidate_id)
+                VALUES (?, ?, ?)
+            ''', (session['voter_id'], election_id, candidate_id))
+        
+        db.commit()
+        
+        # Log the voting action
+        log_audit('vote_cast', 'voter', session['voter_id'], 
+                 f'Voted in election {election_id} for candidate {candidate_id}')
+    
+    flash('Vote cast successfully! Thank you for voting.', 'success')
+    return redirect(url_for('voter_routes.voter_dashboard'))
+
+@voter_bp.route('/voter/results')
+@voter_login_required
+def view_results():
+    election_id = request.args.get('election_id')
+    
+    with get_db() as db:
+        # Get elections in voter's constituency
+        elections = db.execute('''
+            SELECT * FROM elections 
+            WHERE constituency = ? AND status = 'completed'
+            ORDER BY end_time DESC
+        ''', (session['voter_constituency'],)).fetchall()
+        
+        if election_id:
+            results = db.execute('''
+                SELECT c.name, c.party, COUNT(v.id) as vote_count
+                FROM candidates c
+                LEFT JOIN votes v ON c.id = v.candidate_id AND v.election_id = ?
+                WHERE c.constituency = ?
+                GROUP BY c.id
+                ORDER BY vote_count DESC
+            ''', (election_id, session['voter_constituency'])).fetchall()
+            
+            election = db.execute('SELECT * FROM elections WHERE id = ?', (election_id,)).fetchone()
+        else:
+            results = []
+            election = None
+    
+    return render_template('voter_results.html', 
+                         elections=elections, 
+                         results=results, 
+                         election=election)
+
+@voter_bp.route('/voter/profile')
+@voter_login_required
+def voter_profile():
+    with get_db() as db:
+        voter = db.execute(
+            'SELECT * FROM voters WHERE id = ?',
+            (session['voter_id'],)
+        ).fetchone()
+        
+        # Get voting history
+        voting_history = db.execute('''
+            SELECT e.title, e.constituency, c.name as candidate_name, c.party, v.voted_at
+            FROM votes v
+            JOIN elections e ON v.election_id = e.id
+            JOIN candidates c ON v.candidate_id = c.id
+            WHERE v.voter_id = ?
+            ORDER BY v.voted_at DESC
+        ''', (session['voter_id'],)).fetchall()
+    
+    return render_template('voter_profile.html', 
+                         voter=voter, 
+                         voting_history=voting_history)
+
+@voter_bp.route('/voter/logout')
+def voter_logout():
+    session.pop('voter_id', None)
+    session.pop('voter_name', None)
+    session.pop('voter_email', None)
+    session.pop('voter_constituency', None)
+    flash('Logged out successfully', 'success')
+    return redirect(url_for('voter_routes.voter_login'))

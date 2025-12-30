@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Candidate - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h1>Edit Candidate</h1>
+        
+        <form method="POST" enctype="multipart/form-data" class="candidate-form">
+            <div class="form-group">
+                <label for="name">Candidate Name</label>
+                <input type="text" id="name" name="name" value="{{ candidate.name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="party">Political Party</label>
+                <input type="text" id="party" name="party" value="{{ candidate.party }}" required>
+            </div>
+            
+            <div class="form-group">
+    <label for="constituency">Constituency</label>
+    <select id="constituency" name="constituency" required>
+        {% for c in constituencies %}
+        <option value="{{ c.name }}" {% if c.name == candidate.constituency %}selected{% endif %}>
+            {{ c.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="photo">Candidate Photo</label>
+                    <input type="file" id="photo" name="photo" accept="image/*">
+                    {% if candidate.photo_path %}
+                    <small>Current: {{ candidate.photo_path }}</small>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="symbol">Party Symbol</label>
+                    <input type="file" id="symbol" name="symbol" accept="image/*">
+                    {% if candidate.symbol_path %}
+                    <small>Current: {{ candidate.symbol_path }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Update Candidate</button>
+                <a href="{{ url_for('admin_routes.manage_candidates') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

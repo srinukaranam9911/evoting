@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Create Election - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <h1>Create New Election</h1>
+        <p>Set up a new election with candidates and voting period</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('admin_routes.create_election') }}">
+            <div class="form-group">
+                <label for="title">Election Title</label>
+                <input type="text" class="form-control" id="title" name="title" 
+                       placeholder="e.g., Student Union Election 2023" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="constituency">Constituency</label>
+                <select class="form-control" id="constituency" name="constituency" required>
+                    <option value="">Select constituency</option>
+                    <option value="Araku">Araku</option>
+                    <option value="Srikakulam">Srikakulam</option>
+                    <option value="Vizianagaram">Vizianagaram</option>
+                    <option value="Visakhapatnam">Visakhapatnam</option>
+                    <option value="Anakapalli">Anakapalli</option>
+                    <option value="Kakinada">Kakinada</option>
+                    <option value="Amalapuram">Amalapuram</option>
+                    <option value="Rajahmundry">Rajahmundry</option>
+                    <option value="Narasapuram">Narasapuram</option>
+                    <option value="Eluru">Eluru</option>
+                    <option value="Machilipatnam">Machilipatnam</option>
+                    <option value="Vijayawada">Vijayawada</option>
+                    <option value="Guntur">Guntur</option>
+                    <option value="Narasaraopet">Narasaraopet</option>
+                    <option value="Bapatla">Bapatla</option>
+                    <option value="Ongole">Ongole</option>
+                    <option value="Nellore">Nellore</option>
+                    <option value="Tirupati">Tirupati</option>
+                    <option value="Rajampet">Rajampet</option>
+                    <option value="Kadapa">Kadapa</option>
+                    <option value="Hindupur">Hindupur</option>
+                    <option value="Anantapur">Anantapur</option>
+                    <option value="Kurnool">Kurnool</option>
+                    <option value="Nandyal">Nandyal</option>
+                </select>
+            </div>
+            
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="start_time">Start Time</label>
+                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="end_time">End Time</label>
+                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Candidates (Select from existing)</label>
+                <div class="candidates-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #e9ecef; padding: 1rem; border-radius: 8px;">
+                    {% if candidates %}
+                        {% for candidate in candidates %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="candidates" 
+                                   value="{{ candidate.id }}" id="candidate{{ candidate.id }}">
+                            <label class="form-check-label" for="candidate{{ candidate.id }}">
+                                {{ candidate.name }} ({{ candidate.party }}) - {{ candidate.constituency }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No candidates available. <a href="{{ url_for('admin_routes.manage_candidates') }}">Add candidates first</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-actions" style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Election
+                </button>
+                <a href="{{ url_for('admin_routes.admin_dashboard') }}" class="btn btn-outline">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

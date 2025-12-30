@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Email - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="verification-header">
+            <div class="verification-icon">
+                <i class="fas fa-envelope fa-3x"></i>
+            </div>
+            <h1>Verify Your Email</h1>
+            <p>We've sent a verification code to your email address.</p>
+            <p class="email-address">{{ session.pending_voter.email if session.pending_voter else '' }}</p>
+        </div>
+
+        <form method="POST" class="verification-form">
+            <div class="form-group">
+                <label for="otp">Enter Verification Code</label>
+                <input type="text" id="otp" name="otp" 
+                       pattern="[0-9]{6}" 
+                       maxlength="6" 
+                       placeholder="Enter 6-digit code" 
+                       required 
+                       autocomplete="off"
+                       autofocus>
+                <small>Enter the 6-digit code sent to your email</small>
+            </div>
+
+            <div class="verification-info">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Code expires in 10 minutes</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-redo"></i>
+                    <span>Check your spam folder if you don't see the email</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">Verify Email</button>
+        </form>
+
+        <div class="verification-links">
+            <p>Didn't receive the code? <a href="{{ url_for('voter_routes.voter_register') }}">Try registering again</a></p>
+            <p>Already verified? <a href="{{ url_for('voter_routes.voter_login') }}">Login here</a></p>
+        </div>
+
+        <!-- Countdown Timer -->
+        <div class="countdown-container">
+            <div class="countdown-text">Time remaining: <span id="countdown">10:00</span></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Countdown timer for OTP expiry
+let timeLeft = 600; // 10 minutes in seconds
+const countdownElement = document.getElementById('countdown');
+const progressFill = document.getElementById('progressFill');
+
+function updateCountdown() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    
+    countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Update progress bar
+    const progress = (timeLeft / 600) * 100;
+    progressFill.style.width = `${progress}%`;
+    
+    // Change color when time is running out
+    if (timeLeft < 60) {
+        countdownElement.style.color = 'var(--danger)';
+        progressFill.style.background = 'var(--danger)';
+    } else if (timeLeft < 180) {
+        countdownElement.style.color = 'var(--warning)';
+        progressFill.style.background = 'var(--warning)';
+    }
+    
+    if (timeLeft > 0) {
+        timeLeft--;
+        setTimeout(updateCountdown, 1000);
+    } else {
+        countdownElement.textContent = 'Expired!';
+        document.getElementById('otp').disabled = true;
+        document.querySelector('button[type="submit"]').disabled = true;
+        
+        // Show expired message
+        const expiredMessage = document.createElement('div');
+        expiredMessage.className = 'expired-message';
+        expiredMessage.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>The verification code has expired. Please register again.</p>
+            <a href="{{ url_for('voter_routes.voter_register') }}" class="btn btn-outline">Register Again</a>
+        `;
+        document.querySelector('.verification-form').style.display = 'none';
+        document.querySelector('.countdown-container').style.display = 'none';
+        document.querySelector('.form-container').appendChild(expiredMessage);
+    }
+}
+
+// Auto-submit when 6 digits are entered
+document.getElementById('otp').addEventListener('input', function(e) {
+    if (this.value.length === 6) {
+        // Auto-submit the form
+        setTimeout(() => {
+            this.form.submit();
+        }, 500);
+    }
+});
+
+// Format OTP input to only allow numbers
+document.getElementById('otp').addEventListener('keypress', function(e) {
+    const charCode = e.which ? e.which : e.keyCode;
+    if (charCode < 48 || charCode > 57) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Start the countdown when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateCountdown();
+});
+
+// Resend OTP functionality (optional enhancement)
+function resendOTP() {
+    // This would require a backend route to resend OTP
+    // For now, redirect to registration page
+    window.location.href = "{{ url_for('voter_routes.voter_register') }}";
+}
+</script>
+
+<style>
+.form-container {
+    max-width: 500px;
+    margin: 2rem auto;
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.verification-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.verification-icon {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.verification-header h1 {
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.verification-header p {
+    color: var(--gray);
+    margin: 0.3rem 0;
+}
+
+.email-address {
+    font-weight: 600;
+    color: var(--primary) !important;
+    font-size: 1.1rem;
+}
+
+.verification-form {
+    margin: 2rem 0;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    text-align: center;
+    letter-spacing: 0.5rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--gray);
+    font-size: 0.8rem;
+}
+
+.verification-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0.5rem 0;
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.info-item i {
+    color: var(--primary);
+    width: 16px;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+.verification-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.verification-links p {
+    margin: 0.5rem 0;
+    color: var(--gray);
+}
+
+.verification-links a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.verification-links a:hover {
+    text-decoration: underline;
+}
+
+.countdown-container {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.countdown-text {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+#countdown {
+    color: var(--success);
+    font-size: 1.1rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--success);
+    border-radius: 3px;
+    transition: width 1s linear, background-color 1s ease;
+}
+
+.expired-message {
+    text-align: center;
+    padding: 2rem;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.expired-message i {
+    font-size: 2rem;
+    color: var(--warning);
+    margin-bottom: 1rem;
+}
+
+.expired-message p {
+    color: #856404;
+    margin-bottom: 1rem;
+}
+
+/* OTP input styling */
+.otp-input-group {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.otp-input {
+    width: 50px;
+    height: 60px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.otp-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    outline: none;
+}
+
+.otp-input.filled {
+    border-color: var(--success);
+    background: #f8fff8;
+}
+
+@media (max-width: 768px) {
+    .form-container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .form-group input {
+        font-size: 1.1rem;
+        padding: 0.8rem;
+    }
+    
+    .otp-input {
+        width: 40px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Animation for new messages */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.verification-header,
+.verification-form,
+.verification-links,
+.countdown-container {
+    animation: fadeIn 0.5s ease-out;
+}
+</style>
+{% endblock %}

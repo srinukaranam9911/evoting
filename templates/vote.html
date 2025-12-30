@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Cast Your Vote - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="vote-header">
+        <h1>Cast Your Vote</h1>
+        <p>Exercise your democratic right by voting in the election.</p>
+    </div>
+
+    {% if election %}
+    <div class="election-info">
+        <h2>{{ election.title }}</h2>
+        <div class="election-meta">
+            <p><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</p>
+            <p><i class="fas fa-clock"></i> Ends: {{ election.end_time[:16] }}</p>
+        </div>
+    </div>
+
+    <div class="voting-section">
+        <h3>Select Your Candidate</h3>
+        
+        {% if candidates %}
+        <form id="voteForm" method="POST" action="{{ url_for('voter_routes.submit_vote', election_id=election.id) }}">
+            <div class="candidates-grid">
+                {% for candidate in candidates %}
+                <div class="candidate-option">
+                    <input type="radio" 
+                           id="candidate_{{ candidate.id }}" 
+                           name="candidate_id" 
+                           value="{{ candidate.id }}" 
+                           required
+                           onchange="updateSelectedCandidate(this)">
+                    <label for="candidate_{{ candidate.id }}" class="candidate-card">
+                        {% if candidate.photo_path %}
+                        <img src="{{ url_for('static', filename='uploads/' + candidate.photo_path) }}" 
+                             alt="{{ candidate.name }}" class="candidate-photo">
+                        {% else %}
+                        <div class="candidate-photo placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="candidate-details">
+                            <h4>{{ candidate.name }}</h4>
+                            <p class="party">{{ candidate.party }}</p>
+                            {% if candidate.symbol_path %}
+                            <div class="party-symbol">
+                                <img src="{{ url_for('static', filename='uploads/' + candidate.symbol_path) }}" 
+                                     alt="{{ candidate.party }} symbol" class="symbol-img">
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="selection-indicator">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="vote-confirmation" id="confirmationSection" style="display: none;">
+                <div class="confirmation-content">
+                    <h4>Confirm Your Vote</h4>
+                    <p>You are about to vote for: <strong id="selectedCandidateName"></strong></p>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                    
+                    <div class="confirmation-actions">
+                        <button type="button" class="btn btn-outline" onclick="cancelVote()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Confirm Vote</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions" id="voteButton" style="display: none;">
+                <button type="button" class="btn btn-primary btn-lg" onclick="showConfirmation()">
+                    <i class="fas fa-vote-yea"></i> Cast Vote
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="no-candidates">
+            <i class="fas fa-users fa-3x" style="color: var(--gray); margin-bottom: 1rem;"></i>
+            <h4>No Candidates Available</h4>
+            <p>There are no candidates registered for this election in your constituency.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="no-election">
+        <i class="fas fa-exclamation-triangle fa-3x" style="color: var(--warning); margin-bottom: 1rem;"></i>
+        <h3>Election Not Found</h3>
+        <p>The election you're trying to vote in doesn't exist or is no longer active.</p>
+        <a href="{{ url_for('voter_routes.voter_dashboard') }}" class="btn btn-primary">
+            Return to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+let selectedCandidate = null;
+
+function updateSelectedCandidate(radio) {
+    // Reset all cards
+    document.querySelectorAll('.candidate-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Highlight selected card
+    const card = radio.closest('.candidate-option').querySelector('.candidate-card');
+    card.classList.add('selected');
+    
+    // Store selected candidate info
+    selectedCandidate = {
+        name: card.querySelector('h4').textContent,
+        party: card.querySelector('.party').textContent
+    };
+    
+    // Show vote button
+    document.getElementById('voteButton').style.display = 'block';
+}
+
+function showConfirmation() {
+    if (selectedCandidate) {
+        document.getElementById('selectedCandidateName').textContent = 
+            `${selectedCandidate.name} (${selectedCandidate.party})`;
+        document.getElementById('confirmationSection').style.display = 'block';
+        document.getElementById('voteButton').style.display = 'none';
+    }
+}
+
+function cancelVote() {
+    document.getElementById('confirmationSection').style.display = 'none';
+    document.getElementById('voteButton').style.display = 'block';
+}
+
+// Prevent form submission without selection
+document.getElementById('voteForm').addEventListener('submit', function(e) {
+    const selected = document.querySelector('input[name="candidate_id"]:checked');
+    if (!selected) {
+        e.preventDefault();
+        alert('Please select a candidate before voting.');
+    }
+});
+</script>
+
+<style>
+.vote-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.election-info {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.election-info h2 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.election-meta {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.election-meta p {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.voting-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.candidate-option {
+    position: relative;
+}
+
+.candidate-option input[type="radio"] {
+    display: none;
+}
+
+.candidate-card {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    position: relative;
+}
+
+.candidate-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.candidate-card.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, #f8f9ff, #e3f2fd);
+}
+
+.candidate-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 1rem;
+}
+
+.candidate-photo.placeholder {
+    background: var(--light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray);
+    font-size: 1.5rem;
+}
+
+.candidate-details {
+    flex: 1;
+}
+
+.candidate-details h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--dark);
+}
+
+.candidate-details .party {
+    color: var(--primary);
+    font-weight: 600;
+    margin: 0;
+}
+
+.party-symbol {
+    margin-top: 0.5rem;
+}
+
+.symbol-img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.selection-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: #e0e0e0;
+    font-size: 1.5rem;
+    transition: color 0.3s ease;
+}
+
+.candidate-card.selected .selection-indicator {
+    color: var(--success);
+}
+
+.vote-confirmation {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 10px;
+    margin: 2rem 0;
+    border-left: 4px solid var(--warning);
+}
+
+.confirmation-content h4 {
+    color: var(--warning);
+    margin-bottom: 1rem;
+}
+
+.confirmation-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.no-candidates,
+.no-election {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+    .candidates-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .candidate-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .candidate-photo {
+        margin-right: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .election-meta {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Election - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h1>Edit Election</h1>
+        
+        <form method="POST" class="election-form">
+            <div class="form-group">
+                <label for="title">Election Title</label>
+                <input type="text" id="title" name="title" value="{{ election.title }}" required>
+            </div>
+            
+            
+            <div class="form-group">
+                <label for="constituency">Constituency</label>
+                <input type="text" id="constituency" name="constituency" value="{{ election.constituency }}" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start_time">Start Time</label>
+                    <input type="datetime-local" id="start_time" name="start_time" value="{{ election.start_time }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="end_time">End Time</label>
+                    <input type="datetime-local" id="end_time" name="end_time" value="{{ election.end_time }}" required>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Update Election</button>
+                <a href="{{ url_for('admin_routes.admin_dashboard') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+Flask
+Werkzeug
+Flask-SQLAlchemy
+Flask-Login
+SQLAlchemy
+python-dotenv=

@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Voter Dashboard - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <h1>Voter Dashboard</h1>
+        <p>Welcome, {{ session.voter_name }}! Participate in elections and exercise your voting rights.</p>
+        <div class="voter-info">
+            <p><strong>Constituency:</strong> {{ session.voter_constituency }}</p>
+            <p><strong>Email:</strong> {{ session.voter_email }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Active Elections -->
+    <div class="dashboard-section">
+        <h2>Active Elections</h2>
+        {% if active_elections %}
+            <div class="election-grid">
+                {% for election in active_elections %}
+                <div class="election-card active">
+                    <div class="election-badge active">Active</div>
+                    <h3>{{ election.title }}</h3>
+                    <p class="election-description">{{ election.description or 'No description available' }}</p>
+                    <div class="election-meta">
+                        <span><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</span>
+                        <span><i class="fas fa-clock"></i> Ends: {{ election.end_time }}</span>
+                    </div>
+                    <div class="election-actions">
+                        <a href="{{ url_for('voter_routes.vote', election_id=election.id) }}" 
+                           class="btn btn-primary">
+                            <i class="fas fa-vote-yea"></i> Vote Now
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-elections">
+                <i class="fas fa-calendar-check fa-3x" style="color: var(--gray); margin-bottom: 1rem;"></i>
+                <h3>No Active Elections</h3>
+                <p>There are currently no active elections in your constituency.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Upcoming Elections -->
+    {% if upcoming_elections %}
+    <div class="dashboard-section">
+        <h2>Upcoming Elections</h2>
+        <div class="election-grid">
+            {% for election in upcoming_elections %}
+            <div class="election-card upcoming">
+                <div class="election-badge upcoming">Upcoming</div>
+                <h3>{{ election.title }}</h3>
+                <p class="election-description">{{ election.description or 'No description available' }}</p>
+                <div class="election-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</span>
+                    <span><i class="fas fa-clock"></i> Starts: {{ election.start_time }}</span>
+                    <span><i class="fas fa-clock"></i> Ends: {{ election.end_time }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Elections You've Voted In -->
+    {% if voted_elections %}
+    <div class="dashboard-section">
+        <h2>Elections You've Voted In</h2>
+        <div class="election-grid">
+            {% for election in voted_elections %}
+            <div class="election-card voted">
+                <div class="election-badge completed">Voted</div>
+                <h3>{{ election.title }}</h3>
+                <div class="election-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</span>
+                    <span><i class="fas fa-check-circle" style="color: var(--success);"></i> You have voted</span>
+                </div>
+                <div class="election-actions">
+                    <a href="{{ url_for('voter_routes.view_results', election_id=election.id) }}" 
+                       class="btn btn-outline">
+                        <i class="fas fa-chart-bar"></i> View Results
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Completed Elections -->
+    {% if completed_elections %}
+    <div class="dashboard-section">
+        <h2>Completed Elections</h2>
+        <div class="election-grid">
+            {% for election in completed_elections %}
+            <div class="election-card completed">
+                <div class="election-badge completed">Completed</div>
+                <h3>{{ election.title }}</h3>
+                <div class="election-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> {{ election.constituency }}</span>
+                    <span><i class="fas fa-calendar-times"></i> Election ended</span>
+                </div>
+                <div class="election-actions">
+                    <a href="{{ url_for('voter_routes.view_results', election_id=election.id) }}" 
+                       class="btn btn-outline">
+                        <i class="fas fa-chart-bar"></i> View Results
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="dashboard-section">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+            <a href="{{ url_for('voter_routes.view_results') }}" class="btn btn-info">
+                <i class="fas fa-chart-bar"></i> View All Results
+            </a>
+            <a href="{{ url_for('voter_routes.voter_profile') }}" class="btn btn-outline">
+                <i class="fas fa-user"></i> My Profile
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.election-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    border-left: 4px solid var(--primary);
+}
+
+.election-card.active {
+    border-left-color: var(--success);
+}
+
+.election-card.upcoming {
+    border-left-color: var(--warning);
+}
+
+.election-card.completed {
+    border-left-color: var(--gray);
+}
+
+.election-card.voted {
+    border-left-color: var(--info);
+}
+
+.election-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.election-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.election-badge.upcoming {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.election-badge.completed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.election-description {
+    color: var(--gray);
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.election-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    color: var(--dark);
+}
+
+.election-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.election-actions {
+    margin-top: 1rem;
+}
+
+.voter-info {
+    background: rgba(255,255,255,0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.voter-info p {
+    margin: 0.3rem 0;
+    color: white;
+}
+
+.election-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.no-elections {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Create Admin - VoteSecure{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <h1>Create New Admin Account</h1>
+        <p>Create a new administrator account for the voting system</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('admin_routes.create_admin') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+                <small class="form-text">Choose a unique username for the admin</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+                <small class="form-text">Choose a strong password for the admin account</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+            </div>
+            
+            <div class="form-actions" style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-shield"></i> Create Admin
+                </button>
+                <a href="{{ url_for('admin_routes.admin_dashboard') }}" class="btn btn-outline">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        
+        form.addEventListener('submit', function(e) {
+            if (password.value !== confirmPassword.value) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                confirmPassword.focus();
+            }
+            
+            if (password.value.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters long!');
+                password.focus();
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

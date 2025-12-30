@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VoteSecure - AI-Powered Online Voting{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-vote-yea"></i>
+                    <span>VoteSecure</span>
+                </div>
+                <nav>
+                    <ul>
+                        {% if 'voter_id' in session %}
+                            <!-- Voter Logged In - Show Limited Options -->
+                            <li><a href="{{ url_for('voter_routes.voter_dashboard') }}">Dashboard</a></li>
+                            <li><a href="{{ url_for('voter_routes.voter_logout') }}">Logout</a></li>
+                        {% elif 'admin_id' in session %}
+                            <!-- Admin Logged In - Show Admin Options -->
+                            <li><a href="{{ url_for('admin_routes.admin_dashboard') }}">Dashboard</a></li>
+                            <li><a href="{{ url_for('admin_routes.manage_candidates') }}">Candidates</a></li>
+                            <li><a href="{{ url_for('admin_routes.create_election') }}">Create Election</a></li>
+                            <li><a href="{{ url_for('admin_routes.view_results') }}">Results</a></li>
+                            <li><a href="{{ url_for('admin_routes.admin_logout') }}">Logout</a></li>
+                        {% else %}
+                            <!-- Not Logged In - Show Public Options -->
+                            <li><a href="{{ url_for('index') }}">Home</a></li>
+                            <li><a href="{{ url_for('how_it_works') }}">How It Works</a></li>
+                            <li><a href="{{ url_for('about') }}">About</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div class="auth-buttons">
+                    {% if 'voter_id' in session %}
+                        <span class="user-welcome">Welcome, {{ session.voter_name }}</span>
+                    {% elif 'admin_id' in session %}
+                        <span class="user-welcome">Admin: {{ session.admin_username }}</span>
+                    {% else %}
+                        <a href="{{ url_for('voter_routes.voter_login') }}" class="btn btn-outline"><i class="fas fa-user"></i> Voter Login</a>
+                        <a href="{{ url_for('admin_routes.admin_login') }}" class="btn btn-outline"><i class="fas fa-user-shield"></i> Admin Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {{ message }}
+                            <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>VoteSecure</h3>
+                    <p>An AI-powered online voting platform that ensures secure, transparent, and accessible elections.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="{{ url_for('index') }}">Home</a></li>
+                        <li><a href="{{ url_for('how_it_works') }}">How It Works</a></li>
+                        <li><a href="{{ url_for('about') }}">About Us</a></li>
+                        {% if not session.voter_id and not session.admin_id %}
+                            <li><a href="{{ url_for('voter_routes.voter_login') }}">Voter Login</a></li>
+                            <li><a href="{{ url_for('admin_routes.admin_login') }}">Admin Login</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Voter Guide</a></li>
+                        <li><a href="#">Security Overview</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Contact Us</h3>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> 123 Election Ave, Democracy City</li>
+                        <li><i class="fas fa-phone"></i> +1 (555) 123-4567</li>
+                        <li><i class="fas fa-envelope"></i> support@votesecure.com</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 VoteSecure. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
