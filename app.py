@@ -76,6 +76,15 @@ def init_app():
     if not os.path.exists('static/uploads'):
         os.makedirs('static/uploads', exist_ok=True)
 
+@app.route('/init-db')
+def init_database_route():
+    if os.environ.get('FLASK_ENV') == 'production':
+        return "Not allowed in production", 403
+    
+    from database import init_db
+    init_db()
+    return "Database initialized!", 200
+
 if __name__ == '__main__':
     init_app()
     port = int(os.environ.get('PORT', 5000))
