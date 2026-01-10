@@ -161,6 +161,17 @@ def init_db():
         db.commit()
 
 
+if __name__ == '__main__':
+    # Initialize database on startup
+    try:
+        from database import initialize_database
+        initialize_database()
+    except Exception as e:
+        print(f"Warning: Could not initialize database: {e}")
+    
+    app.run(debug=True)
+
+
 def get_constituencies():
     """Fetch constituencies"""
     with get_db() as db:
