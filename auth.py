@@ -13,9 +13,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# REMOVE the duplicate hash_password function from here
-# It should only exist in database.py
-
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
@@ -124,12 +121,13 @@ def send_otp_email(email, otp):
 def log_audit(action, user_type, user_id, details=None):
     """Log user actions for security auditing"""
     with get_db() as db:
-        db.execute('''
-            INSERT INTO audit_logs (action, user_type, user_id, ip_address, user_agent, details)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (action, user_type, user_id, request.remote_addr, 
-              request.headers.get('User-Agent'), details))
-        db.commit()
+        with db.cursor() as cursor:  # Create a cursor
+            cursor.execute('''
+                INSERT INTO audit_logs (action, user_type, user_id, ip_address, user_agent, details)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (action, user_type, user_id, request.remote_addr, 
+                  request.headers.get('User-Agent'), details))
+            db.commit()
 
 def voter_login_required(f):
     @wraps(f)
@@ -152,13 +150,16 @@ def admin_login_required(f):
 def check_fraud_risk(voter_id, election_id, action):
     """Simple fraud detection - check for multiple voting attempts"""
     with get_db() as db:
-        existing_votes = db.execute(
-            'SELECT COUNT(*) FROM votes WHERE voter_id = ? AND election_id = ?',
-            (voter_id, election_id)
-        ).fetchone()[0]
-        
-        if existing_votes > 0:
-            return False, "You have already voted in this election."
+        with db.cursor() as cursor:
+            cursor.execute(
+                'SELECT COUNT(*) FROM votes WHERE voter_id = %s AND election_id = %s',
+                (voter_id, election_id)
+            )
+            result = cursor.fetchone()
+            existing_votes = result['count'] if result else 0
+            
+            if existing_votes > 0:
+                return False, "You have already voted in this election."
     
     return True, "OK"
 
