@@ -17,6 +17,7 @@ def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
 def send_otp_email(email, otp):
+    """Send OTP email with detailed error logging"""
     try:
         # Get email configuration from environment variables
         smtp_server = os.getenv('EMAIL_SERVER', 'smtp.gmail.com')
@@ -25,14 +26,29 @@ def send_otp_email(email, otp):
         password = os.getenv('EMAIL_PASSWORD')
         from_email = os.getenv('EMAIL_FROM', sender_email)
         
-        print(f"Attempting to send email via {smtp_server}:{port}")
-        print(f"From: {sender_email}")
-        print(f"To: {email}")
+        print("=" * 50)
+        print("📧 EMAIL SENDING DEBUG INFO")
+        print("=" * 50)
+        print(f"SMTP Server: {smtp_server}")
+        print(f"Port: {port}")
+        print(f"Sender Email: {'✓ SET' if sender_email else '✗ MISSING'}")
+        print(f"Password: {'✓ SET' if password else '✗ MISSING'}")
+        print(f"Recipient: {email}")
+        print("=" * 50)
         
-        if not sender_email or not password:
-            error_msg = "Email credentials not configured. Please check your .env file."
-            print(error_msg)
+        if not sender_email:
+            print("❌ ERROR: EMAIL_USERNAME not found in environment variables")
+            print("Add to .env: EMAIL_USERNAME=your-email@gmail.com")
             return False
+        
+        if not password:
+            print("❌ ERROR: EMAIL_PASSWORD not found in environment variables")
+            print("Add to .env: EMAIL_PASSWORD=your-16-digit-app-password")
+            return False
+        
+        if "@gmail.com" in sender_email and len(password) < 16:
+            print("❌ WARNING: For Gmail, use 16-character App Password, not regular password")
+            print("Get it from: https://myaccount.google.com/apppasswords")
         
         # Create message
         message = MIMEMultipart("alternative")
@@ -90,32 +106,70 @@ def send_otp_email(email, otp):
         message.attach(MIMEText(html, "html"))
         
         # Send email with better error handling
-        print("Connecting to SMTP server...")
-        server = smtplib.SMTP(smtp_server, port, timeout=30)
-        print("Starting TLS...")
-        server.starttls()
-        print("Logging in...")
-        server.login(sender_email, password)
-        print("Sending email...")
-        server.sendmail(from_email, email, message.as_string())
-        server.quit()
+        print("🔌 Connecting to SMTP server...")
+        try:
+            server = smtplib.SMTP(smtp_server, port, timeout=30)
+            print("✅ Connected to SMTP server")
+        except Exception as e:
+            print(f"❌ Failed to connect to SMTP: {e}")
+            return False
         
-        print(f"OTP email sent successfully to {email}")
-        return True
+        try:
+            print("🔒 Starting TLS encryption...")
+            server.starttls()
+            print("✅ TLS started successfully")
+        except Exception as e:
+            print(f"❌ TLS failed: {e}")
+            server.quit()
+            return False
+        
+        try:
+            print("🔑 Logging in...")
+            server.login(sender_email, password)
+            print("✅ Login successful")
+        except smtplib.SMTPAuthenticationError:
+            print("❌ Authentication failed. Check:")
+            print("   1. Email and password are correct")
+            print("   2. For Gmail: Use 16-character App Password")
+            print("   3. 2-Step Verification is enabled")
+            print("   4. Allow less secure apps is ON (if using regular password)")
+            server.quit()
+            return False
+        except Exception as e:
+            print(f"❌ Login error: {e}")
+            server.quit()
+            return False
+        
+        try:
+            print("📤 Sending email...")
+            server.sendmail(from_email, email, message.as_string())
+            print(f"✅ Email sent successfully to {email}")
+            server.quit()
+            return True
+        except Exception as e:
+            print(f"❌ Failed to send email: {e}")
+            server.quit()
+            return False
         
     except smtplib.SMTPAuthenticationError as e:
-        print(f"SMTP Authentication Error: {e}")
-        print("Please check your email and app password in .env file")
+        print(f"❌ SMTP Authentication Error: {e}")
+        print("For Gmail users:")
+        print("1. Go to https://myaccount.google.com/security")
+        print("2. Enable 2-Step Verification")
+        print("3. Generate App Password for 'Mail'")
+        print("4. Use that 16-digit password in .env file")
         return False
     except smtplib.SMTPConnectError as e:
-        print(f"SMTP Connection Error: {e}")
-        print("Please check your internet connection and SMTP server settings")
+        print(f"❌ SMTP Connection Error: {e}")
+        print("Check your internet connection or try different SMTP server")
         return False
     except smtplib.SMTPException as e:
-        print(f"SMTP Error: {e}")
+        print(f"❌ SMTP Error: {e}")
         return False
     except Exception as e:
-        print(f"Unexpected error sending email: {str(e)}")
+        print(f"❌ Unexpected error sending email: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def log_audit(action, user_type, user_id, details=None):
