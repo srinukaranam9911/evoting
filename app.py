@@ -32,64 +32,6 @@ except Exception as e:
     print(f"Warning: Database initialization error: {e}")
     print("The app will continue but database operations may fail.")
 
-# Register blueprints
-app.register_blueprint(admin_routes.admin_bp)
-app.register_blueprint(voter_routes.voter_bp)
-
-@app.route('/')
-def index():
-    # If user is logged in as voter, redirect to voter dashboard
-    if 'voter_id' in session:
-        return redirect(url_for('voter_routes.voter_dashboard'))
-    # If user is logged in as admin, redirect to admin dashboard
-    elif 'admin_id' in session:
-        return redirect(url_for('admin_routes.admin_dashboard'))
-    # Otherwise show the public home page
-    return render_template('index.html')
-
-@app.route('/about')
-def about():
-    # If user is logged in as voter, redirect to voter dashboard
-    if 'voter_id' in session:
-        return redirect(url_for('voter_routes.voter_dashboard'))
-    # If user is logged in as admin, redirect to admin dashboard
-    elif 'admin_id' in session:
-        return redirect(url_for('admin_routes.admin_dashboard'))
-    # Otherwise show the public about page
-    return render_template('about.html')
-
-@app.route('/how-it-works')
-def how_it_works():
-    # If user is logged in as voter, redirect to voter dashboard
-    if 'voter_id' in session:
-        return redirect(url_for('voter_routes.voter_dashboard'))
-    # If user is logged in as admin, redirect to admin dashboard
-    elif 'admin_id' in session:
-        return redirect(url_for('admin_routes.admin_dashboard'))
-    # Otherwise show the public how-it-works page
-    return render_template('how_it_works.html')
-
-# Error handlers
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return render_template('500.html'), 500
-
-@app.route('/init-db')
-def init_database_route():
-    """Manual database initialization endpoint (for emergencies)"""
-    try:
-        from database import init_db
-        init_db()
-        return "Database initialized successfully!", 200
-    except Exception as e:
-        return f"Database initialization failed: {str(e)}", 500
-    
-
-# Add this to app.py (replace the previous /setup route if you have it)
 
 @app.route('/setup', methods=['GET', 'POST'])
 def setup_system():
@@ -453,6 +395,63 @@ def setup_system():
         </div>
     </html>
     '''
+
+# Register blueprints
+app.register_blueprint(admin_routes.admin_bp)
+app.register_blueprint(voter_routes.voter_bp)
+
+@app.route('/')
+def index():
+    # If user is logged in as voter, redirect to voter dashboard
+    if 'voter_id' in session:
+        return redirect(url_for('voter_routes.voter_dashboard'))
+    # If user is logged in as admin, redirect to admin dashboard
+    elif 'admin_id' in session:
+        return redirect(url_for('admin_routes.admin_dashboard'))
+    # Otherwise show the public home page
+    return render_template('index.html')
+
+@app.route('/about')
+def about():
+    # If user is logged in as voter, redirect to voter dashboard
+    if 'voter_id' in session:
+        return redirect(url_for('voter_routes.voter_dashboard'))
+    # If user is logged in as admin, redirect to admin dashboard
+    elif 'admin_id' in session:
+        return redirect(url_for('admin_routes.admin_dashboard'))
+    # Otherwise show the public about page
+    return render_template('about.html')
+
+@app.route('/how-it-works')
+def how_it_works():
+    # If user is logged in as voter, redirect to voter dashboard
+    if 'voter_id' in session:
+        return redirect(url_for('voter_routes.voter_dashboard'))
+    # If user is logged in as admin, redirect to admin dashboard
+    elif 'admin_id' in session:
+        return redirect(url_for('admin_routes.admin_dashboard'))
+    # Otherwise show the public how-it-works page
+    return render_template('how_it_works.html')
+
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
+
+@app.route('/init-db')
+def init_database_route():
+    """Manual database initialization endpoint (for emergencies)"""
+    try:
+        from database import init_db
+        init_db()
+        return "Database initialized successfully!", 200
+    except Exception as e:
+        return f"Database initialization failed: {str(e)}", 500
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
