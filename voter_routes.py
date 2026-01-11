@@ -100,7 +100,6 @@ def voter_register():
         email = request.form['email']
         password = hash_password(request.form['password'])
         constituency = request.form['constituency']
-        # Aadhar number removed
         
         with get_db() as db:
             with db.cursor() as cursor:
@@ -112,7 +111,7 @@ def voter_register():
             
             if existing_voter:
                 flash('Email already registered', 'error')
-                return render_template('voter_register.html', constituencies=constituencies)  # PASS CONSTITUENCIES ON ERROR
+                return render_template('voter_register.html', constituencies=constituencies)
             
             # Generate OTP
             otp = generate_otp()
@@ -128,16 +127,21 @@ def voter_register():
                 'otp_expiry': otp_expiry
             }
             
-            # Send OTP email
+            # Send OTP email with more detailed feedback
+            print(f"🔄 Attempting to send OTP to {email}")
             if send_otp_email(email, otp):
-                flash('OTP sent to your email. Please verify to complete registration.', 'success')
+                flash(f'OTP sent to {email}. Please verify to complete registration.', 'success')
                 return redirect(url_for('voter_routes.verify_email'))
             else:
-                flash('Failed to send OTP. Please try again.', 'error')
+                # Show user-friendly error message
+                flash('Failed to send OTP. Please check your email address and try again.', 'error')
+                # Keep form data
+                return render_template('voter_register.html', 
+                                     constituencies=constituencies,
+                                     form_data={'name': name, 'email': email, 'constituency': constituency})
     
-    # PASS CONSTITUENCIES TO TEMPLATE FOR BOTH GET AND POST
     return render_template('voter_register.html', constituencies=constituencies)
-
+    
 @voter_bp.route('/voter/verify-email', methods=['GET', 'POST'])
 def verify_email():
     # Check if pending voter data exists
