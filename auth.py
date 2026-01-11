@@ -17,11 +17,11 @@ def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
 def send_otp_email(email, otp):
-    """Send OTP email with detailed error logging"""
+    """Send OTP email with SSL on port 465 (works on Render)"""
     try:
         # Get email configuration from environment variables
         smtp_server = os.getenv('EMAIL_SERVER', 'smtp.gmail.com')
-        port = int(os.getenv('EMAIL_PORT', 587))
+        port = int(os.getenv('EMAIL_PORT', 465))  # Changed to 465
         sender_email = os.getenv('EMAIL_USERNAME')
         password = os.getenv('EMAIL_PASSWORD')
         from_email = os.getenv('EMAIL_FROM', sender_email)
@@ -30,25 +30,15 @@ def send_otp_email(email, otp):
         print("📧 EMAIL SENDING DEBUG INFO")
         print("=" * 50)
         print(f"SMTP Server: {smtp_server}")
-        print(f"Port: {port}")
+        print(f"Port: {port} (SSL)")
         print(f"Sender Email: {'✓ SET' if sender_email else '✗ MISSING'}")
         print(f"Password: {'✓ SET' if password else '✗ MISSING'}")
         print(f"Recipient: {email}")
         print("=" * 50)
         
-        if not sender_email:
-            print("❌ ERROR: EMAIL_USERNAME not found in environment variables")
-            print("Add to .env: EMAIL_USERNAME=your-email@gmail.com")
+        if not sender_email or not password:
+            print("❌ Email credentials missing")
             return False
-        
-        if not password:
-            print("❌ ERROR: EMAIL_PASSWORD not found in environment variables")
-            print("Add to .env: EMAIL_PASSWORD=your-16-digit-app-password")
-            return False
-        
-        if "@gmail.com" in sender_email and len(password) < 16:
-            print("❌ WARNING: For Gmail, use 16-character App Password, not regular password")
-            print("Get it from: https://myaccount.google.com/apppasswords")
         
         # Create message
         message = MIMEMultipart("alternative")
@@ -56,71 +46,22 @@ def send_otp_email(email, otp):
         message["From"] = from_email
         message["To"] = email
         
-        # HTML email content
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                .header {{ background: linear-gradient(135deg, #4361ee, #7209b7); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-                .otp {{ font-size: 32px; font-weight: bold; color: #4361ee; text-align: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }}
-                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>VoteSecure</h1>
-                    <p>Email Verification</p>
-                </div>
-                <h2>Hello!</h2>
-                <p>Your One-Time Password (OTP) for email verification is:</p>
-                <div class="otp">{otp}</div>
-                <p>This OTP will expire in 10 minutes.</p>
-                <p>If you didn't request this verification, please ignore this email.</p>
-                <div class="footer">
-                    <p>&copy; 2023 VoteSecure. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        # Plain text version
-        text = f"""
-        VoteSecure - Email Verification
-        
-        Your One-Time Password (OTP) for email verification is: {otp}
-        
-        This OTP will expire in 10 minutes.
-        
-        If you didn't request this verification, please ignore this email.
-        
-        © 2023 VoteSecure. All rights reserved.
-        """
+        # HTML email content (same as before)
+        html = f""" ... (keep your HTML content) ... """
+        text = f""" ... (keep your text content) ... """
         
         # Add both versions to the message
         message.attach(MIMEText(text, "plain"))
         message.attach(MIMEText(html, "html"))
         
-        # Send email with better error handling
-        print("🔌 Connecting to SMTP server...")
+        # Send email with SSL (not TLS)
+        print(f"🔌 Connecting to SMTP server with SSL on port {port}...")
         try:
-            server = smtplib.SMTP(smtp_server, port, timeout=30)
-            print("✅ Connected to SMTP server")
+            # Use SMTP_SSL instead of SMTP for port 465
+            server = smtplib.SMTP_SSL(smtp_server, port, timeout=30)
+            print("✅ Connected to SMTP server (SSL)")
         except Exception as e:
-            print(f"❌ Failed to connect to SMTP: {e}")
-            return False
-        
-        try:
-            print("🔒 Starting TLS encryption...")
-            server.starttls()
-            print("✅ TLS started successfully")
-        except Exception as e:
-            print(f"❌ TLS failed: {e}")
-            server.quit()
+            print(f"❌ Failed to connect with SSL: {e}")
             return False
         
         try:
@@ -128,15 +69,7 @@ def send_otp_email(email, otp):
             server.login(sender_email, password)
             print("✅ Login successful")
         except smtplib.SMTPAuthenticationError:
-            print("❌ Authentication failed. Check:")
-            print("   1. Email and password are correct")
-            print("   2. For Gmail: Use 16-character App Password")
-            print("   3. 2-Step Verification is enabled")
-            print("   4. Allow less secure apps is ON (if using regular password)")
-            server.quit()
-            return False
-        except Exception as e:
-            print(f"❌ Login error: {e}")
+            print("❌ Authentication failed")
             server.quit()
             return False
         
@@ -151,27 +84,11 @@ def send_otp_email(email, otp):
             server.quit()
             return False
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"❌ SMTP Authentication Error: {e}")
-        print("For Gmail users:")
-        print("1. Go to https://myaccount.google.com/security")
-        print("2. Enable 2-Step Verification")
-        print("3. Generate App Password for 'Mail'")
-        print("4. Use that 16-digit password in .env file")
-        return False
-    except smtplib.SMTPConnectError as e:
-        print(f"❌ SMTP Connection Error: {e}")
-        print("Check your internet connection or try different SMTP server")
-        return False
-    except smtplib.SMTPException as e:
-        print(f"❌ SMTP Error: {e}")
-        return False
     except Exception as e:
-        print(f"❌ Unexpected error sending email: {str(e)}")
+        print(f"❌ Unexpected error: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
-
 def log_audit(action, user_type, user_id, details=None):
     """Log user actions for security auditing"""
     with get_db() as db:
